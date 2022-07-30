@@ -1,9 +1,14 @@
 # Author Loik Andrey 7034@balancedv.ru
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# vim:fileencoding=utf-8
 import config
 import requests
 import json
 import logging
 from datetime import datetime, timedelta
+
+logging.basicConfig(filename="set_client.log", level=logging.INFO)
 
 
 def new_client():
@@ -22,21 +27,19 @@ def new_client():
             f'&dateRegistredStart={dateRegStart}&dateRegistredEnd={dateRegEnd}'
         )
         if req.status_code == 200 and len(req.json()) > 0:
-            print('Пришёл корректный ответ. Обрабатываем...')
-            logging.info('Пришёл корректный ответ. Обрабатываем...')
+            logging.info(f"{datetime.now()} - Correct answer. Working...")
             return req.json()
         elif req.status_code == 200 and len(req.json()) == 0:
-            print('Приходит пустой ответ.\nЛибо не было регистраций, либо в ответе приходит ошибка.\n'
-                  'Если есть проблемы в работе программы, то выполните запрос в браузере.')
+            logging.info(f"{datetime.now()} - Empty answer.\n"
+                         f"Not new registration, or error.\n"
+                         f"If there are problems in the program, then run the request in the browser.")
     except BaseException:
-        print(f'Не смог отправить GET-запрос{BaseException}')
+        logging.exception(f"{datetime.now()} - Failed to send GET request:\n{BaseException}")
 
 
 def set_profile_client(js):
     for item in js:
         param_json = {}
-        print(item)
-        print(item['offices'])
         if item['profileId'] == '6922524':
             if len(item['offices']) == 1:
 
@@ -46,30 +49,37 @@ def set_profile_client(js):
                     'userId': item['userId']
                 }
 
-                print(f"У клиента один офис: {item['offices'][0]}. Подставляем профиль.")
+                logging.info(f"{datetime.now()} - The client has one office: {item['offices'][0]}. Set profile.")
+
                 if item['offices'][0] in ['35880', '35881', '35883']:
                     param_json['profileId'] = config.profileSV_ID
                 elif item['offices'][0] in ['35884', '35885']:
                     param_json['profileId'] = config.profileAV_ID
             else:
-                print(
-                    f"Количество офисов клиента: {len(item['offices'])}."
-                    f"Автоматически установить профиль не возможно."
-                    f"Требуется установка вручную."
-                )
+                logging.error(f"{datetime.now()} - "
+                              f"Quantity client offices: {len(item['offices'])}."
+                              f"It is not possible to automatically install a profile."
+                              f"Requires manual installation."
+                              )
 
-            print(param_json)
             req_set_user_profile = requests.post(f'{config.POST_URL_USER}', data=param_json)
-            print(req_set_user_profile.status_code)
-            print(json.loads(req_set_user_profile.text))
-            print('\n')
+            if req_set_user_profile.status_code == 200:
+                logging.info(f"{datetime.now()} - "
+                             f"Client {param_json['userId']} successfully installed profile {param_json['profileId']}"
+                             )
+            else:
+                logging.error(f"{datetime.now()} - "
+                              f"Client {param_json['userId']} failed to install profile {param_json['profileId']}"
+                              )
+        else:
+            logging.info(f"{datetime.now()} - "
+                         f"Do not change. Client {item['userId']} the correct profile {item['profileId']}."
+                         )
 
 
 def main():
     js_user_id = new_client()
-    print(js_user_id)
     set_profile_client(js_user_id)
-    print('Установка профиля произведена')
 
 
 if __name__ == '__main__':

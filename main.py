@@ -1,11 +1,9 @@
 # Author Loik Andrey 7034@balancedv.ru
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# vim:fileencoding=utf-8
 import config
 import requests
 import json
 import logging
+import time
 from datetime import datetime, timedelta
 
 logging.basicConfig(filename="set_client.log", level=logging.INFO)
@@ -20,6 +18,7 @@ def new_client():
 
     dateRegStart = (datetime.now() + timedelta(hours=-20)).strftime('%Y-%m-%d %H:%M:%S')
     dateRegEnd = (datetime.now() + timedelta(hours=-7)).strftime('%Y-%m-%d %H:%M:%S')
+    logging.info(f'\nTime on server = {datetime.now()}\nDate start = {dateRegStart}\nDate end = {dateRegEnd}')
 
     try:
         req = requests.get(
@@ -78,8 +77,10 @@ def set_profile_client(js):
 
 
 def main():
-    js_user_id = new_client()
-    set_profile_client(js_user_id)
+    while True:
+        js_user_id = new_client()
+        set_profile_client(js_user_id)
+        time.sleep(300)
 
 
 if __name__ == '__main__':
